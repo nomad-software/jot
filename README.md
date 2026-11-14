@@ -5,11 +5,9 @@ with Qt 6 (via [qute](https://github.com/nomad-software/qute)). It is for
 plain text and quick edits: tabs, line numbers, find and replace, and
 nothing that gets in the way. There is no syntax highlighting.
 
-![Jot in its light theme](docs/window-light.png)
+![Jot](docs/screenshot.png)
 
-![Jot in its dark theme](docs/window-dark.png)
-
-The screenshots in `docs/` are drawn by `make screenshots`.
+The screenshot is drawn by `make screenshots`.
 
 ## Features
 

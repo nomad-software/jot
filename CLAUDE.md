@@ -10,14 +10,15 @@ the reference for packaging, toolbar, icons and window themes; ApeMail
 ## Build and check
 - `make build` (./jot), `make test` (race), `make check` (vet, gofmt,
   staticcheck in `$GOPATH/bin`, `qute vet` at go.mod's version),
-  `make icons` (SVG → embedded PNG), `make screenshots` (docs/*.png),
+  `make icons` (SVG → embedded PNG), `make screenshots` (docs/screenshot.png),
   `make appimage`.
 - GUI tests (`internal/ui/gui_test.go`) run on Qt's offscreen platform, so
   they need no display. Answer dialogs opened by the call under test with
   `answer(t, button)` / `qutetest.WhenModal`, and wait with
   `qutetest.WaitFor`. Always pass a short `-timeout`.
 - `JOT_SCREENSHOTS=dir go test -run TestScreenshot ./internal/ui` saves
-  window and Settings pictures to look at; `JOT_PERF=1 go test -run
+  the README's one screenshot: a note in the default settings, no bars or
+  highlights. Keep it looking like plain everyday use. `JOT_PERF=1 go test -run
   LargeFileTimes -v ./internal/ui` times a 13 MB file. Report the numbers
   before and after any performance change.
 - Run under Xvfb with `QT_QPA_PLATFORM=xcb`, `XDG_CONFIG_HOME` and

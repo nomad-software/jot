@@ -36,10 +36,9 @@ check: vet
 icons:
 	rsvg-convert -w 256 -h 256 packaging/jot.svg -o internal/appicon/appicon.png
 
-# Saves screenshots of the window and the Settings dialog, in the light and
-# dark themes, in docs/.
+# Saves the README's screenshot of the window, docs/screenshot.png.
 screenshots:
-	JOT_SCREENSHOTS=$(CURDIR)/docs go test -run "TestScreenshot|TestAbout$$" -count=1 ./internal/ui
+	JOT_SCREENSHOTS=$(CURDIR)/docs go test -run "TestScreenshot" -count=1 ./internal/ui
 
 # Builds Jot-<version>-x86_64.AppImage here with the Qt found by
 # pkg-config (see packaging/appimage.sh). The work is done in a temporary

@@ -3,7 +3,6 @@ package ui
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -560,53 +559,58 @@ func TestUndoRedoActionsFollowTheDocument(t *testing.T) {
 
 // TestScreenshot saves pictures of the window to look at: the find bar
 // open for replacing, and a notice, in the light and dark themes.
+// TestScreenshot saves the README's screenshot, docs/screenshot.png: a
+// note open as it looks in everyday use.
 func TestScreenshot(t *testing.T) {
 	dir := os.Getenv("JOT_SCREENSHOTS")
 	if dir == "" {
-		t.Skip("set JOT_SCREENSHOTS to a folder to save screenshots in")
+		t.Skip("set JOT_SCREENSHOTS to a folder to save the screenshot in")
 	}
-	path := writeFile(t, "notes.txt", []byte(strings.Repeat("The quick brown fox jumps over the lazy dog.\n\tIndented with a tab.\n", 12)))
-	for _, theme := range []string{"light", "dark"} {
-		qutetest.Run(t, func() {
-			w := newTestWindow(t, func(c *config.Config) {
-				c.WindowTheme = theme
-				c.EditorTheme = "solarized-" + theme
-			}, path)
-			w.run("new_tab", false)
-			w.run("prev_tab", false)
-			d := w.current()
-			d.goTo(3, 5)
-			w.run("replace", false)
-			qutetest.Type(w.find.find, "fox")
-			w.find.replace.SetText("cat")
-			d.showNotice("notes.txt has changed on disk. Reload it, losing your changes, or keep your version?", true)
-			qutetest.Wait(100)
-			if err := qute.SaveScreenshot(w.w, filepath.Join(dir, "window-"+theme+".png")); err != nil {
-				t.Error(err)
-			}
-			w.setRecentFiles([]string{path, "/home/me/notes/todo.txt", "/etc/hosts"})
-			w.fillRecentMenu()
-			w.recent.Popup(w.w.MapToGlobal(qtcore.QPoint{X: 40, Y: 60}))
-			qutetest.Wait(50)
-			if err := qute.SaveScreenshot(w.recent, filepath.Join(dir, "recent-"+theme+".png")); err != nil {
-				t.Error(err)
-			}
-			w.recent.Close()
-			sd := w.newSettingsDialog()
-			sd.dlg.Show()
-			for i := range sd.tabs.Count() {
-				sd.tabs.SetCurrentIndex(i)
-				qutetest.Wait(50)
-				name := fmt.Sprintf("settings-%d-%s.png", i, theme)
-				if err := qute.SaveScreenshot(sd.dlg, filepath.Join(dir, name)); err != nil {
-					t.Error(err)
-				}
-			}
-			sd.dlg.Reject()
-			sd.dlg.DeleteLater()
-		})
+	// The file is in a home folder of its own, so the status bar shows a
+	// path like a user's.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	path := filepath.Join(home, "Documents", "notes.txt")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
 	}
+	if err := os.WriteFile(path, []byte(screenshotText), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	qutetest.Run(t, func() {
+		// The window and the text in matching themes: the dark window
+		// theme with Solarized Dark.
+		w := newTestWindow(t, func(c *config.Config) {
+			c.WindowTheme = "dark"
+			c.EditorTheme = "solarized-dark"
+			c.FontSize = 13
+		}, path)
+		w.w.Resize(900, 600)
+		w.current().goTo(9, 26)
+		qutetest.Wait(100)
+		if err := qute.SaveScreenshot(w.w, filepath.Join(dir, "screenshot.png")); err != nil {
+			t.Error(err)
+		}
+	})
 }
+
+const screenshotText = `Weekend plans
+
+Saturday
+	- Farmers' market first thing, before it gets busy
+	- Pick up the bike from the repair shop (closes at 4)
+	- Finish reading the last chapter of the book club novel
+
+Sunday
+	- Long walk along the river if the weather holds
+	- Call Mum and Dad in the afternoon
+	- Batch cook for the week: soup, curry and flapjacks
+
+Shopping list
+	- Oats, golden syrup, butter
+	- Lentils, coconut milk, spinach
+	- Coffee beans
+`
 
 // A change the watcher reports for a file whose tab has closed since does
 // not watch the file again.
