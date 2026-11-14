@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="14 14 228 228">
+  <!-- In the style of Termite's icon: a thick dark outline, a body with a
+       lighter band along its top, and a dark panel with the content. -->
+  <defs>
+    <path id="page" d="M67 24 H160 L210 74 V211 a21 21 0 0 1 -21 21 H67 a21 21 0 0 1 -21 -21 V45 a21 21 0 0 1 21 -21 z"/>
+    <clipPath id="inside"><use href="#page"/></clipPath>
+  </defs>
+  <!-- page body with a thick dark outline -->
+  <use href="#page" fill="#2e2a4f" stroke="#2e2a4f" stroke-width="20" stroke-linejoin="round"/>
+  <use href="#page" fill="#a9a0ec"/>
+  <!-- top band highlight -->
+  <rect x="46" y="24" width="164" height="42" fill="#c7c0f7" clip-path="url(#inside)"/>
+  <!-- the folded corner -->
+  <path d="M160 24 V56 a18 18 0 0 0 18 18 H210 z" fill="#e9e4ff" stroke="#2e2a4f" stroke-width="10" stroke-linejoin="round"/>
+  <!-- text area: line numbers and text -->
+  <rect x="58" y="84" width="140" height="134" rx="12" fill="#2e2a4f"/>
+  <rect x="94" y="146" width="104" height="24" fill="#433d6e"/>
+  <rect x="88" y="84" width="6" height="134" fill="#a9a0ec"/>
+  <rect x="66" y="100" width="14" height="10" rx="5" fill="#c7c0f7"/>
+  <rect x="66" y="124" width="14" height="10" rx="5" fill="#c7c0f7"/>
+  <rect x="66" y="153" width="14" height="10" rx="5" fill="#e9e4ff"/>
+  <rect x="66" y="182" width="14" height="10" rx="5" fill="#c7c0f7"/>
+  <rect x="104" y="100" width="70" height="10" rx="5" fill="#bcd3ff"/>
+  <rect x="104" y="124" width="48" height="10" rx="5" fill="#bcd3ff"/>
+  <rect x="104" y="153" width="40" height="10" rx="5" fill="#bcd3ff"/>
+  <rect x="104" y="182" width="78" height="10" rx="5" fill="#bcd3ff"/>
+  <!-- the text cursor -->
+  <rect x="152" y="143" width="9" height="30" rx="4" fill="#a8ecf7"/>
+</svg>

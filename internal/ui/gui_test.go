@@ -1,0 +1,627 @@
+package ui
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/nomad-software/qute"
+	"github.com/nomad-software/qute/qtcore"
+	"github.com/nomad-software/qute/qtgui"
+	"github.com/nomad-software/qute/qtwidgets"
+	"github.com/nomad-software/qute/qutetest"
+
+	"jot/internal/config"
+	"jot/internal/textfile"
+)
+
+func TestMain(m *testing.M) { qutetest.TestMain(m) }
+
+// newTestWindow opens a window with a settings file of its own, which is
+// closed when the test ends, its changes let go.
+func newTestWindow(t *testing.T, set func(*config.Config), files ...string) *Window {
+	t.Helper()
+	t.Setenv("JOT_NO_DESKTOP_ENTRY", "1")
+	cfg := config.Default()
+	cfg.FontFamily = "DejaVu Sans Mono"
+	if set != nil {
+		set(cfg)
+	}
+	w := NewWindow(cfg, filepath.Join(t.TempDir(), "config.json"), nil, files)
+	t.Cleanup(func() {
+		qute.PostSync(func() {
+			for _, d := range w.docs {
+				d.edit.Document().SetModifiedFull(false)
+			}
+			if w.w.Alive() {
+				w.w.Close()
+				w.w.DeleteLater()
+			}
+		})
+	})
+	return w
+}
+
+// answer answers the next message box with a button.
+func answer(t *testing.T, button qtwidgets.QMessageBoxStandardButtons) {
+	qutetest.WhenModal(t, func(m *qtwidgets.QWidget) {
+		box := qtwidgets.QMessageBoxCast(m)
+		if box == nil {
+			t.Errorf("a %s is open, not a message box", m.ObjectName())
+			return
+		}
+		qutetest.Click(box.Button(button))
+	})
+}
+
+// findChild returns the object under o with the name.
+func findChild(o qtcore.QObjectLike, name string) *qtcore.QObject {
+	for _, c := range o.AsQObject().Children() {
+		if c.ObjectName() == name {
+			return c
+		}
+		if found := findChild(c, name); found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
+func writeFile(t *testing.T, name string, data []byte) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), name)
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestOpenEditSaveKeepsEncodingAndLineEndings(t *testing.T) {
+	path := writeFile(t, "latin.txt", []byte("caf\xe9\r\nsecond\r\n"))
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil, path)
+		d := w.current()
+		if d.text() != "café\nsecond\n" {
+			t.Fatalf("text = %q", d.text())
+		}
+		if w.status.enc.Text() != "ISO-8859-1" || w.status.eol.Text() != "Windows" {
+			t.Errorf("status shows %q, %q", w.status.enc.Text(), w.status.eol.Text())
+		}
+		if !strings.HasSuffix(w.w.WindowTitle(), "latin.txt - Jot") {
+			t.Errorf("title = %q", w.w.WindowTitle())
+		}
+		qutetest.Key(d.edit, qtcore.Key_End, qtcore.NoModifier)
+		qutetest.Type(d.edit, "!")
+		if !d.modified() || w.tabs.TabText(0) != "*latin.txt" || !strings.HasPrefix(w.w.WindowTitle(), "*") {
+			t.Errorf("modified %v, tab %q, title %q", d.modified(), w.tabs.TabText(0), w.w.WindowTitle())
+		}
+		w.run("save", false)
+		got, _ := os.ReadFile(path)
+		if want := []byte("caf\xe9!\r\nsecond\r\n"); !bytes.Equal(got, want) {
+			t.Errorf("saved %q, want %q", got, want)
+		}
+		if d.modified() || w.tabs.TabText(0) != "latin.txt" {
+			t.Errorf("after saving: modified %v, tab %q", d.modified(), w.tabs.TabText(0))
+		}
+	})
+}
+
+func TestChangeEncodingAndLineEndings(t *testing.T) {
+	path := writeFile(t, "a.txt", []byte("one\ntwo\n"))
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil, path)
+		d := w.current()
+		w.setEncoding(d, textfile.UTF16LE)
+		w.setLineEnding(d, textfile.CRLF)
+		if !d.modified() || w.status.enc.Text() != "UTF-16 LE" || w.status.eol.Text() != "Windows" {
+			t.Errorf("modified %v, status %q %q", d.modified(), w.status.enc.Text(), w.status.eol.Text())
+		}
+		w.run("save", false)
+		got, _ := os.ReadFile(path)
+		want, _ := textfile.Encode("one\r\ntwo\r\n", textfile.UTF16LE)
+		if !bytes.Equal(got, want) {
+			t.Errorf("saved %q, want %q", got, want)
+		}
+
+		// Reopening as another encoding reads the bytes again.
+		w.reopen(d, textfile.Latin1)
+		if d.encoding != textfile.Latin1 || !strings.HasPrefix(d.text(), "ÿþo\x00") {
+			t.Errorf("reopened as %s: %q", d.encoding, d.text())
+		}
+	})
+}
+
+func TestUnrepresentableTextIsNotSaved(t *testing.T) {
+	path := writeFile(t, "a.txt", []byte("caf\xe9"))
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil, path)
+		d := w.current()
+		qutetest.Type(d.edit, "λ")
+		answer(t, qtwidgets.QMessageBoxOk)
+		if w.save(d) {
+			t.Error("text Latin-1 cannot hold was saved")
+		}
+		if got, _ := os.ReadFile(path); string(got) != "caf\xe9" {
+			t.Errorf("the file was changed: %q", got)
+		}
+	})
+}
+
+func TestTabsAndUntitledDocuments(t *testing.T) {
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil)
+		if len(w.docs) != 1 || w.current().name() != "Untitled 1" {
+			t.Fatalf("docs %d, name %q", len(w.docs), w.current().name())
+		}
+		w.run("new_tab", false)
+		w.run("new_tab", false)
+		if w.current().name() != "Untitled 3" || w.tabs.Count() != 3 {
+			t.Errorf("name %q, tabs %d", w.current().name(), w.tabs.Count())
+		}
+		// Closing one frees its number.
+		w.closeDoc(w.docs[1])
+		w.run("new_tab", false)
+		if w.current().name() != "Untitled 2" {
+			t.Errorf("name %q", w.current().name())
+		}
+		w.run("next_tab", false)
+		if w.tabs.CurrentIndex() != 0 {
+			t.Errorf("next tab from the last is %d", w.tabs.CurrentIndex())
+		}
+		// Closing the last leaves a new one.
+		for len(w.docs) > 1 {
+			w.closeDoc(w.docs[0])
+		}
+		w.closeDoc(w.docs[0])
+		if len(w.docs) != 1 || w.tabs.Count() != 1 {
+			t.Errorf("after closing them all: %d docs, %d tabs", len(w.docs), w.tabs.Count())
+		}
+	})
+}
+
+func TestClosingModifiedAsks(t *testing.T) {
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil)
+		w.run("new_tab", false)
+		d := w.current()
+		qutetest.Type(d.edit, "keep me")
+
+		answer(t, qtwidgets.QMessageBoxCancel)
+		w.closeDoc(d)
+		if len(w.docs) != 2 {
+			t.Fatal("Cancel closed the document")
+		}
+		answer(t, qtwidgets.QMessageBoxDiscard)
+		w.closeDoc(d)
+		if len(w.docs) != 1 {
+			t.Fatal("Discard did not close the document")
+		}
+
+		// The window does not close while a document's changes are
+		// unanswered.
+		qutetest.Type(w.current().edit, "more")
+		answer(t, qtwidgets.QMessageBoxCancel)
+		w.w.Close()
+		if !w.w.IsVisible() {
+			t.Error("the window closed although Cancel was chosen")
+		}
+	})
+}
+
+func TestOpenFiles(t *testing.T) {
+	a := writeFile(t, "a.txt", []byte("a"))
+	b := writeFile(t, "b.txt", []byte("b"))
+	missing := filepath.Join(t.TempDir(), "new.txt")
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil)
+		w.openFiles([]string{a})
+		if len(w.docs) != 1 || w.current().path != a {
+			t.Fatalf("the new document was not replaced: %d docs", len(w.docs))
+		}
+		// An untitled tab that had text typed and deleted is empty: it is
+		// used too, rather than a new tab opened beside it.
+		w.run("new_tab", false)
+		qutetest.Type(w.current().edit, "x")
+		qutetest.Key(w.current().edit, qtcore.Key_Backspace, qtcore.NoModifier)
+		w.openFiles([]string{b})
+		if len(w.docs) != 2 || w.current().path != b {
+			t.Fatalf("an emptied tab was not used: %d docs, current %q", len(w.docs), w.current().path)
+		}
+		w.openFiles([]string{b, a})
+		if len(w.docs) != 2 || w.current().path != a {
+			t.Errorf("opening an open file: %d docs, current %q", len(w.docs), w.current().path)
+		}
+		w.openFiles([]string{missing})
+		d := w.current()
+		if d.path != missing || d.text() != "" {
+			t.Fatalf("a missing file: path %q", d.path)
+		}
+		qutetest.Type(d.edit, "made")
+		w.run("save", false)
+		if got, _ := os.ReadFile(missing); string(got) != "made" {
+			t.Errorf("saving a new file wrote %q", got)
+		}
+		// A folder is not opened.
+		answer(t, qtwidgets.QMessageBoxOk)
+		w.openFiles([]string{filepath.Dir(a)})
+		if len(w.docs) != 3 {
+			t.Errorf("%d docs after opening a folder", len(w.docs))
+		}
+	})
+}
+
+func TestBinaryFileAsks(t *testing.T) {
+	path := writeFile(t, "a.bin", []byte("ELF\x00\x01\x02"))
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil)
+		answer(t, qtwidgets.QMessageBoxNo)
+		w.openFiles([]string{path})
+		if w.current().path != "" {
+			t.Error("a binary file was opened when No was answered")
+		}
+	})
+}
+
+func TestTabKeyIndents(t *testing.T) {
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, func(c *config.Config) { c.InsertSpaces = true; c.TabWidth = 4 })
+		d := w.current()
+		qutetest.Type(d.edit, "ab")
+		qutetest.Key(d.edit, qtcore.Key_Tab, qtcore.NoModifier)
+		if d.text() != "ab  " {
+			t.Errorf("Tab after two characters: %q", d.text())
+		}
+		d.edit.SetPlainText("one\ntwo\n\nthree")
+		d.edit.SelectAll()
+		qutetest.Key(d.edit, qtcore.Key_Tab, qtcore.NoModifier)
+		if d.text() != "    one\n    two\n\n    three" {
+			t.Errorf("indented: %q", d.text())
+		}
+		qutetest.Key(d.edit, qtcore.Key_Backtab, qtcore.ShiftModifier)
+		if d.text() != "one\ntwo\n\nthree" {
+			t.Errorf("unindented: %q", d.text())
+		}
+		// Indenting is one change to undo.
+		qutetest.Key(d.edit, qtcore.Key_Tab, qtcore.NoModifier)
+		d.edit.Undo()
+		if d.text() != "one\ntwo\n\nthree" {
+			t.Errorf("after undo: %q", d.text())
+		}
+
+		w.applyConfig(func() *config.Config { c := *w.cfg; c.InsertSpaces = false; return &c }())
+		d.edit.SetPlainText("")
+		qutetest.Key(d.edit, qtcore.Key_Tab, qtcore.NoModifier)
+		if d.text() != "\t" {
+			t.Errorf("Tab without spaces: %q", d.text())
+		}
+	})
+}
+
+func TestStatusPosition(t *testing.T) {
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, func(c *config.Config) { c.TabWidth = 8 })
+		d := w.current()
+		d.edit.SetPlainText("first\n\tsecond")
+		d.goTo(1, 1)
+		if got := w.status.pos.Text(); got != "Ln 2, Col 9" {
+			t.Errorf("after a tab: %q", got)
+		}
+		c := d.edit.TextCursor()
+		c.SetPosition(2)
+		c.SetPositionFull(10, qtgui.QTextCursorKeepAnchor)
+		d.edit.SetTextCursor(c)
+		if got := w.status.pos.Text(); got != "Ln 2, Col 12 (2 lines, 8 chars selected)" {
+			t.Errorf("with a selection: %q", got)
+		}
+	})
+}
+
+func TestFindAndReplace(t *testing.T) {
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil)
+		d := w.current()
+		d.edit.SetPlainText("cat dog cat\nCat catalog")
+		d.goTo(0, 0)
+		w.run("find", false)
+		if !w.find.visible() {
+			t.Fatal("the find bar did not open")
+		}
+		qutetest.Type(w.find.find, "cat")
+		if got := d.edit.TextCursor().SelectedText(); got != "cat" || d.edit.TextCursor().SelectionStart() != 0 {
+			t.Errorf("typing found %q at %d", got, d.edit.TextCursor().SelectionStart())
+		}
+		if got := w.find.count.Text(); got != "1 of 4" {
+			t.Errorf("count %q", got)
+		}
+		qutetest.Key(w.find.find, qtcore.Key_Return, qtcore.NoModifier)
+		if d.edit.TextCursor().SelectionStart() != 8 {
+			t.Errorf("Enter went to %d", d.edit.TextCursor().SelectionStart())
+		}
+		w.find.matchCase.SetChecked(true)
+		w.find.wholeWords.SetChecked(true)
+		if got := w.find.count.Text(); !strings.HasSuffix(got, "2") {
+			t.Errorf("whole words with case: count %q", got)
+		}
+		w.find.wholeWords.SetChecked(false)
+		w.find.matchCase.SetChecked(false)
+
+		w.run("replace", false)
+		if !w.find.replaceRow.IsVisible() {
+			t.Fatal("the replace row is hidden")
+		}
+		w.find.replace.SetText("cats cat")
+		w.find.replaceAll()
+		if got := d.text(); got != "cats cat dog cats cat\ncats cat cats catalog" {
+			t.Errorf("replaced all: %q", got)
+		}
+		d.edit.Undo()
+		if got := d.text(); got != "cat dog cat\nCat catalog" {
+			t.Errorf("Replace All took more than one undo: %q", got)
+		}
+
+		qutetest.Key(w.find.find, qtcore.Key_Escape, qtcore.NoModifier)
+		if w.find.visible() || len(d.editor.matches) != 0 {
+			t.Error("Escape did not close the bar and clear the highlights")
+		}
+	})
+}
+
+func TestNotFound(t *testing.T) {
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil)
+		w.current().edit.SetPlainText("text")
+		w.run("find", false)
+		qutetest.Type(w.find.find, "zzz")
+		if w.find.find.Property("notFound").Value() != true || w.find.count.Text() != "No matches" {
+			t.Errorf("notFound %v, count %q", w.find.find.Property("notFound").Value(), w.find.count.Text())
+		}
+	})
+}
+
+func TestFileChangedOnDisk(t *testing.T) {
+	path := writeFile(t, "a.txt", []byte("one\n"))
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil, path)
+		d := w.current()
+
+		// Unchanged here: read again at once.
+		time.Sleep(10 * time.Millisecond) // a later modification time
+		os.WriteFile(path, []byte("two\n"), 0o644)
+		if !qutetest.WaitFor(func() bool { return d.text() == "two\n" }, 3*time.Second) {
+			t.Fatalf("not reloaded: %q", d.text())
+		}
+		if d.modified() {
+			t.Error("reloading left it modified")
+		}
+
+		// Changed here as well: asked about.
+		qutetest.Type(d.edit, "mine ")
+		os.WriteFile(path, []byte("three\n"), 0o644)
+		if !qutetest.WaitFor(func() bool { return d.notice.IsVisible() }, 3*time.Second) {
+			t.Fatal("no notice for a change on disk")
+		}
+		if !strings.Contains(d.text(), "mine") {
+			t.Error("the text was replaced although it had changes")
+		}
+		qutetest.Click(d.noticeReload)
+		if d.text() != "three\n" || d.notice.IsVisible() {
+			t.Errorf("after Reload: %q, notice %v", d.text(), d.notice.IsVisible())
+		}
+
+		// Its own saves are not changes made by others.
+		qutetest.Type(d.edit, "saved ")
+		w.run("save", false)
+		qutetest.Wait(400)
+		if d.notice.IsVisible() || d.modified() {
+			t.Error("its own save was taken for a change on disk")
+		}
+
+		// Deleted: said so, and saving writes it again.
+		os.Remove(path)
+		if !qutetest.WaitFor(func() bool { return d.notice.IsVisible() }, 3*time.Second) {
+			t.Fatal("no notice for a deleted file")
+		}
+		if !d.modified() {
+			t.Error("a deleted file's text is not marked to save")
+		}
+	})
+}
+
+func TestViewOptionsAreSaved(t *testing.T) {
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil)
+		d := w.current()
+		if !d.editor.gutter.IsVisible() || d.editor.ViewportMargins().Left == 0 {
+			t.Fatal("no line numbers at first")
+		}
+		// Room for two digits and one more to their left.
+		nine := d.editor.gutter.FontMetrics().HorizontalAdvance("9")
+		if got := d.editor.gutterWidth(); got != 2*gutterPadding+3*nine {
+			t.Errorf("the gutter is %d wide, want %d", got, 2*gutterPadding+3*nine)
+		}
+		w.acts["line_numbers"].Trigger()
+		if d.editor.gutter.IsVisible() || d.editor.ViewportMargins().Left != w.cfg.Padding {
+			t.Error("line numbers still shown")
+		}
+		w.acts["wrap_text"].Trigger()
+		if d.edit.LineWrapMode() != qtwidgets.QPlainTextEditWidgetWidth {
+			t.Error("not wrapping")
+		}
+		w.acts["toolbar"].Trigger()
+		if w.toolbar.IsVisible() {
+			t.Error("toolbar still shown")
+		}
+		c, err := config.Load(w.cfgPath)
+		if err != nil || c.ShowLineNumbers || !c.WrapText || c.Toolbar {
+			t.Errorf("saved %+v, %v", c, err)
+		}
+	})
+}
+
+func TestSettingsDialog(t *testing.T) {
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil)
+		s := w.newSettingsDialog()
+		defer s.dlg.DeleteLater()
+		spin := qtwidgets.QSpinBoxCast(findChild(s.dlg, "tabWidth"))
+		spin.SetValue(2)
+		qtwidgets.QSpinBoxCast(findChild(s.dlg, "padding")).SetValue(12)
+		save := qtwidgets.QKeySequenceEditCast(findChild(s.dlg, "shortcut_save"))
+		save.SetKeySequence(keySequence("Ctrl+Alt+S"))
+		if !s.apply() {
+			t.Fatal("apply failed")
+		}
+		if w.cfg.TabWidth != 2 || w.cfg.Keybindings["save"] != "Ctrl+Alt+S" {
+			t.Errorf("applied tab width %d, save %q", w.cfg.TabWidth, w.cfg.Keybindings["save"])
+		}
+		if d := w.current(); d.edit.Viewport().Y() != 12 || d.modified() {
+			t.Errorf("padding %v, modified %v", d.edit.Viewport().Y(), d.modified())
+		}
+		if got := w.acts["save"].Shortcut().ToString(); got != "Ctrl+Alt+S" {
+			t.Errorf("the action's shortcut is %q", got)
+		}
+		var saved map[string]any
+		data, _ := os.ReadFile(w.cfgPath)
+		json.Unmarshal(data, &saved)
+		if saved["tab_width"] != 2.0 {
+			t.Errorf("the file has %s", data)
+		}
+
+		// Two actions with one shortcut are refused.
+		qtwidgets.QKeySequenceEditCast(findChild(s.dlg, "shortcut_open")).SetKeySequence(keySequence("Ctrl+Alt+S"))
+		answer(t, qtwidgets.QMessageBoxOk)
+		if s.apply() {
+			t.Error("clashing shortcuts were applied")
+		}
+	})
+}
+
+func TestSettingsDialogSizeIsSaved(t *testing.T) {
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil)
+		qutetest.WhenModal(t, func(m *qtwidgets.QWidget) {
+			m.Resize(900, 700)
+			qtwidgets.QDialogCast(m).Reject() // Cancel keeps the size too
+		})
+		w.showSettings()
+		c, err := config.Load(w.cfgPath)
+		if err != nil || c.SettingsWidth != 900 || c.SettingsHeight != 700 {
+			t.Fatalf("saved %dx%d, %v", c.SettingsWidth, c.SettingsHeight, err)
+		}
+		s := w.newSettingsDialog()
+		defer s.dlg.DeleteLater()
+		if s.dlg.Width() != 900 || s.dlg.Height() != 700 {
+			t.Errorf("opened at %dx%d", s.dlg.Width(), s.dlg.Height())
+		}
+	})
+}
+
+func TestNewWindowStartsAProcess(t *testing.T) {
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil)
+		var started string
+		old := startProcess
+		startProcess = func(path string) error { started = path; return nil }
+		defer func() { startProcess = old }()
+		w.run("new_window", false)
+		if started == "" {
+			t.Error("no process started")
+		}
+	})
+}
+
+func TestUndoRedoActionsFollowTheDocument(t *testing.T) {
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil)
+		d := w.current()
+		if w.acts["undo"].IsEnabled() || w.acts["copy"].IsEnabled() {
+			t.Error("undo or copy enabled with nothing to do")
+		}
+		qutetest.Type(d.edit, "x")
+		if !w.acts["undo"].IsEnabled() {
+			t.Error("undo disabled after typing")
+		}
+		d.edit.SelectAll()
+		if !w.acts["copy"].IsEnabled() {
+			t.Error("copy disabled with a selection")
+		}
+		w.run("undo", false)
+		if d.text() != "" || !w.acts["redo"].IsEnabled() {
+			t.Errorf("after undo: %q, redo %v", d.text(), w.acts["redo"].IsEnabled())
+		}
+	})
+}
+
+// TestScreenshot saves pictures of the window to look at: the find bar
+// open for replacing, and a notice, in the light and dark themes.
+func TestScreenshot(t *testing.T) {
+	dir := os.Getenv("JOT_SCREENSHOTS")
+	if dir == "" {
+		t.Skip("set JOT_SCREENSHOTS to a folder to save screenshots in")
+	}
+	path := writeFile(t, "notes.txt", []byte(strings.Repeat("The quick brown fox jumps over the lazy dog.\n\tIndented with a tab.\n", 12)))
+	for _, theme := range []string{"light", "dark"} {
+		qutetest.Run(t, func() {
+			w := newTestWindow(t, func(c *config.Config) {
+				c.WindowTheme = theme
+				c.EditorTheme = "solarized-" + theme
+			}, path)
+			w.run("new_tab", false)
+			w.run("prev_tab", false)
+			d := w.current()
+			d.goTo(3, 5)
+			w.run("replace", false)
+			qutetest.Type(w.find.find, "fox")
+			w.find.replace.SetText("cat")
+			d.showNotice("notes.txt has changed on disk. Reload it, losing your changes, or keep your version?", true)
+			qutetest.Wait(100)
+			if err := qute.SaveScreenshot(w.w, filepath.Join(dir, "window-"+theme+".png")); err != nil {
+				t.Error(err)
+			}
+			w.setRecentFiles([]string{path, "/home/me/notes/todo.txt", "/etc/hosts"})
+			w.fillRecentMenu()
+			w.recent.Popup(w.w.MapToGlobal(qtcore.QPoint{X: 40, Y: 60}))
+			qutetest.Wait(50)
+			if err := qute.SaveScreenshot(w.recent, filepath.Join(dir, "recent-"+theme+".png")); err != nil {
+				t.Error(err)
+			}
+			w.recent.Close()
+			sd := w.newSettingsDialog()
+			sd.dlg.Show()
+			for i := range sd.tabs.Count() {
+				sd.tabs.SetCurrentIndex(i)
+				qutetest.Wait(50)
+				name := fmt.Sprintf("settings-%d-%s.png", i, theme)
+				if err := qute.SaveScreenshot(sd.dlg, filepath.Join(dir, name)); err != nil {
+					t.Error(err)
+				}
+			}
+			sd.dlg.Reject()
+			sd.dlg.DeleteLater()
+		})
+	}
+}
+
+// A change the watcher reports for a file whose tab has closed since does
+// not watch the file again.
+func TestClosedFileIsNotWatchedAgain(t *testing.T) {
+	path := writeFile(t, "a.txt", []byte("one\n"))
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil, path)
+		if !slices.Contains(w.watcher.Files(), path) {
+			t.Fatal("the open file is not watched")
+		}
+		w.changed[path] = true
+		w.closeDoc(w.current())
+		w.checkChanged()
+		if slices.Contains(w.watcher.Files(), path) {
+			t.Error("the closed file is watched again")
+		}
+	})
+}
