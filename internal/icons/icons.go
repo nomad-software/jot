@@ -19,10 +19,11 @@ const (
 	Find      = "find"
 	Settings  = "settings"
 	Close     = "close"
+	Quit      = "quit"
 )
 
 // Names are every icon there is.
-var Names = []string{NewWindow, NewTab, Open, Save, SaveAs, Find, Settings, Close}
+var Names = []string{NewWindow, NewTab, Open, Save, SaveAs, Find, Settings, Close, Quit}
 
 //go:embed svg/*.svg
 var files embed.FS

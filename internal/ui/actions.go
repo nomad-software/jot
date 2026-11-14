@@ -25,7 +25,7 @@ var actionSpecs = []actionSpec{
 	{id: "save", label: "&Save", short: "Save", icon: icons.Save},
 	{id: "save_as", label: "Save &As…", short: "Save As", icon: icons.SaveAs},
 	{id: "close_tab", label: "&Close Tab"},
-	{id: "quit", label: "&Quit"},
+	{id: "quit", label: "&Quit", short: "Quit", icon: icons.Quit},
 	{id: "undo", label: "&Undo"},
 	{id: "redo", label: "&Redo"},
 	{id: "cut", label: "Cu&t"},
@@ -61,7 +61,7 @@ var menuSpecs = []struct {
 
 // toolbarActions are the toolbar's buttons in order, "" standing for a
 // separator.
-var toolbarActions = []string{"new_tab", "", "open", "save", "save_as", "", "find", "", "settings"}
+var toolbarActions = []string{"new_tab", "", "open", "save", "save_as", "", "find", "", "settings", "", "quit"}
 
 // plainLabel returns an action's label as the Settings dialog shows it:
 // without its mnemonic or ellipsis.
