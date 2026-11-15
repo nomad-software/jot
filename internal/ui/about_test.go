@@ -34,7 +34,7 @@ func TestAbout(t *testing.T) {
 		if d.version.Text() != AppVersion() {
 			t.Errorf("the version shown is %q", d.version.Text())
 		}
-		if d.WindowTitle() != "About Jot" {
+		if d.WindowTitle() != "About Notepad" {
 			t.Errorf("title %q", d.WindowTitle())
 		}
 		licences := licenceText()
@@ -47,7 +47,7 @@ func TestAbout(t *testing.T) {
 		if need := d.Layout().AsQLayoutItem().HeightForWidth(d.Width()); d.Height() < need {
 			t.Errorf("the about box is %d high, and needs %d", d.Height(), need)
 		}
-		if dir := os.Getenv("JOT_SCREENSHOTS"); dir != "" {
+		if dir := os.Getenv("NOTEPAD_SCREENSHOTS"); dir != "" {
 			d.Show()
 			qutetest.Wait(50)
 			qute.SaveScreenshot(d, filepath.Join(dir, "about.png"))

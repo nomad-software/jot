@@ -1,4 +1,4 @@
-// Jot is a simple text editor for Linux, with tabs, in the style of
+// Notepad is a simple text editor for Linux, with tabs, in the style of
 // gedit.
 package main
 
@@ -13,10 +13,10 @@ import (
 	"github.com/nomad-software/qute/qtcore"
 	"github.com/nomad-software/qute/qtgui"
 
-	"jot/internal/appicon"
-	"jot/internal/config"
-	"jot/internal/desktop"
-	"jot/internal/ui"
+	"notepad/internal/appicon"
+	"notepad/internal/config"
+	"notepad/internal/desktop"
+	"notepad/internal/ui"
 )
 
 func main() {
@@ -24,12 +24,12 @@ func main() {
 	cpuProfile := flag.String("cpuprofile", "", "write a CPU profile to this file")
 	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: jot [flags] [file...]\n")
+		fmt.Fprintf(os.Stderr, "usage: notepad [flags] [file...]\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 	if *showVersion {
-		fmt.Println("jot", ui.AppVersion())
+		fmt.Println("notepad", ui.AppVersion())
 		return
 	}
 
@@ -50,7 +50,7 @@ func main() {
 	}
 
 	ui.NewApplication()
-	qtcore.QCoreApplicationSetApplicationName("jot")
+	qtcore.QCoreApplicationSetApplicationName("notepad")
 	// No application display name is set: Qt would append it to every
 	// window title, which has the editor's name already.
 
@@ -63,9 +63,9 @@ func main() {
 	// The desktop is given an entry for the program, which starts the copy
 	// that is running now, wherever it is, so that it can be started from
 	// the desktop's menus, kept in a dock, and chosen to open text files.
-	if os.Getenv("JOT_NO_DESKTOP_ENTRY") == "" {
+	if os.Getenv("NOTEPAD_NO_DESKTOP_ENTRY") == "" {
 		if err := desktop.Install(appicon.PNG); err != nil {
-			fmt.Fprintln(os.Stderr, "jot: the desktop entry could not be written:", err)
+			fmt.Fprintln(os.Stderr, "notepad: the desktop entry could not be written:", err)
 		}
 	}
 
@@ -80,6 +80,6 @@ func main() {
 
 func fatal(err error) {
 	pprof.StopCPUProfile() // os.Exit skips the deferred stop; a no-op unless profiling
-	fmt.Fprintln(os.Stderr, "jot:", err)
+	fmt.Fprintln(os.Stderr, "notepad:", err)
 	os.Exit(1)
 }

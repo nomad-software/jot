@@ -1,4 +1,4 @@
-# Jot — notes for Claude
+# Notepad — notes for Claude
 
 A simple text editor for Linux in the style of gedit: Go + Qt 6.12+ via
 qute (github.com/nomad-software/qute, the user's own project, checked out
@@ -8,7 +8,7 @@ the reference for packaging, toolbar, icons and window themes; ApeMail
 (see README "Why no OpenGL?"). See README.md for features and settings.
 
 ## Build and check
-- `make build` (./jot), `make test` (race), `make check` (vet, gofmt,
+- `make build` (./notepad), `make test` (race), `make check` (vet, gofmt,
   staticcheck in `$GOPATH/bin`, `qute vet` at go.mod's version),
   `make icons` (SVG → embedded PNG), `make screenshots` (docs/screenshot.png),
   `make appimage`.
@@ -16,19 +16,20 @@ the reference for packaging, toolbar, icons and window themes; ApeMail
   they need no display. Answer dialogs opened by the call under test with
   `answer(t, button)` / `qutetest.WhenModal`, and wait with
   `qutetest.WaitFor`. Always pass a short `-timeout`.
-- `JOT_SCREENSHOTS=dir go test -run TestScreenshot ./internal/ui` saves
-  the README's one screenshot: a note in the default settings, no bars or
-  highlights. Keep it looking like plain everyday use. `JOT_PERF=1 go test -run
+- `NOTEPAD_SCREENSHOTS=dir go test -run TestScreenshot ./internal/ui` saves
+  the README's one screenshot: a note in the dark window theme with
+  Solarized Dark at 13 pt, no bars or highlights. Keep it looking like
+  plain everyday use. `NOTEPAD_PERF=1 go test -run
   LargeFileTimes -v ./internal/ui` times a 13 MB file. Report the numbers
   before and after any performance change.
 - Run under Xvfb with `QT_QPA_PLATFORM=xcb`, `XDG_CONFIG_HOME` and
-  `XDG_DATA_HOME` in a scratch folder and `JOT_NO_DESKTOP_ENTRY=1`. Under
+  `XDG_DATA_HOME` in a scratch folder and `NOTEPAD_NO_DESKTOP_ENTRY=1`. Under
   Xvfb on this KDE machine the "system" window theme draws the menu bar and
   toolbar labels dark on dark (Breeze's header colours don't load there);
   use `window_theme` light/dark, or `QT_QPA_PLATFORMTHEME=gtk3`, for
   screenshots.
 - `make appimage` works in a temporary folder outside the project and leaves
-  only `Jot-<version>-x86_64.AppImage` here. Never create a `build/`
+  only `Notepad-<version>-x86_64.AppImage` here. Never create a `build/`
   folder in the project.
 
 ## Layout

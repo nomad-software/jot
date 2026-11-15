@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"strings"
 
-	"jot/internal/atomicfile"
+	"notepad/internal/atomicfile"
 )
 
 // Config is the user's settings.
@@ -119,15 +119,15 @@ func Default() *Config {
 	}
 }
 
-// Dir returns the folder of the settings file: $XDG_CONFIG_HOME/jot, or
-// ~/.config/jot. A relative XDG_CONFIG_HOME is ignored, as the XDG
+// Dir returns the folder of the settings file: $XDG_CONFIG_HOME/notepad, or
+// ~/.config/notepad. A relative XDG_CONFIG_HOME is ignored, as the XDG
 // specification says.
 func Dir() string {
 	if d := os.Getenv("XDG_CONFIG_HOME"); d != "" && filepath.IsAbs(d) {
-		return filepath.Join(d, "jot")
+		return filepath.Join(d, "notepad")
 	}
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "jot")
+	return filepath.Join(home, ".config", "notepad")
 }
 
 // Path returns the settings file's path.
@@ -264,7 +264,11 @@ func (c *Config) normalize() []string {
 		}
 	}
 	if clashes := Clashes(c.Keybindings); len(clashes) > 0 {
-		problems = append(problems, "keybindings used by more than one action: "+strings.Join(clashes, ", "))
+		var shown []string
+		for _, cl := range clashes {
+			shown = append(shown, cl.String())
+		}
+		problems = append(problems, "keybindings used by more than one action: "+strings.Join(shown, ", "))
 	}
 	slices.Sort(problems)
 	return problems
@@ -305,25 +309,34 @@ func normalizeShortcut(s string) string {
 	return strings.ToLower(strings.ReplaceAll(s, " ", ""))
 }
 
-// Clashes returns, sorted, each shortcut that more than one action has, with
-// those actions: "Ctrl+S (save, save_as)".
-func Clashes(bindings map[string]string) []string {
+// Clash is a shortcut that more than one action has.
+type Clash struct {
+	Key     string   // as the first of the actions spells it
+	Actions []string // sorted
+}
+
+// String returns the clash as "Ctrl+S (save, save_as)".
+func (c Clash) String() string {
+	return fmt.Sprintf("%s (%s)", c.Key, strings.Join(c.Actions, ", "))
+}
+
+// Clashes returns each shortcut that more than one action has, with those
+// actions, sorted by the shortcut.
+func Clashes(bindings map[string]string) []Clash {
 	byKey := map[string][]string{}
-	shown := map[string]string{}
 	for action, key := range bindings {
 		if n := normalizeShortcut(key); n != "" {
 			byKey[n] = append(byKey[n], action)
-			shown[n] = key
 		}
 	}
-	var out []string
-	for n, actions := range byKey {
+	var out []Clash
+	for _, actions := range byKey {
 		if len(actions) > 1 {
 			slices.Sort(actions)
-			out = append(out, fmt.Sprintf("%s (%s)", shown[n], strings.Join(actions, ", ")))
+			out = append(out, Clash{Key: bindings[actions[0]], Actions: actions})
 		}
 	}
-	slices.Sort(out)
+	slices.SortFunc(out, func(a, b Clash) int { return strings.Compare(a.String(), b.String()) })
 	return out
 }
 

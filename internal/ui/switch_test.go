@@ -10,7 +10,7 @@ import (
 	"github.com/nomad-software/qute/qtwidgets"
 	"github.com/nomad-software/qute/qutetest"
 
-	"jot/internal/config"
+	"notepad/internal/config"
 )
 
 // pixel returns the colour at (x, y) of a picture of w, as "#rrggbb".

@@ -1,11 +1,11 @@
-# <img src="internal/appicon/appicon.png" alt="" width="40" height="40"> Jot
+# <img src="internal/appicon/appicon.png" alt="" width="40" height="40"> Notepad
 
 A simple, quick text editor for Linux in the style of gedit, written in Go
 with Qt 6 (via [qute](https://github.com/nomad-software/qute)). It is for
 plain text and quick edits: tabs, line numbers, find and replace, and
 nothing that gets in the way. There is no syntax highlighting.
 
-![Jot](docs/screenshot.png)
+![Notepad](docs/screenshot.png)
 
 The screenshot is drawn by `make screenshots`.
 
@@ -44,37 +44,37 @@ The screenshot is drawn by `make screenshots`.
 
 ## Build and run
 
-The easiest way to get Jot is the AppImage from a release (see
+The easiest way to get Notepad is the AppImage from a release (see
 [AppImage](#appimage)). To build it yourself you need Go 1.27+, Qt 6.12 or
 newer development files (Widgets, Svg), `pkg-config` and a C++17 compiler.
 
 ```sh
-make build              # or: go build -o jot .
-./jot               # an empty tab
-./jot a.txt b.txt   # a tab for each file
-./jot --config FILE # another settings file
-./jot --version
-make appimage           # Jot-<version>-x86_64.AppImage
+make build                  # or: go build -o notepad .
+./notepad                   # an empty tab
+./notepad a.txt b.txt       # a tab for each file
+./notepad --config FILE     # another settings file
+./notepad --version
+make appimage               # Notepad-<version>-x86_64.AppImage
 ```
 
 The first build compiles qute's C++ shims and takes a few minutes; later
 builds are cached.
 
-On every start, Jot writes a desktop entry
-(`~/.local/share/applications/jot.desktop`) and its icon
-(`~/.local/share/icons/hicolor/256x256/apps/jot.png`). They point at
+On every start, Notepad writes a desktop entry
+(`~/.local/share/applications/notepad.desktop`) and its icon
+(`~/.local/share/icons/hicolor/256x256/apps/notepad.png`). They point at
 the copy that is running, so it appears in the desktop's menus and can be
-pinned to a dock. Set `JOT_NO_DESKTOP_ENTRY=1` to skip this.
-`packaging/jot.desktop` is a static entry for packagers. The icon is
-drawn from `packaging/jot.svg` (`make icons`) and embedded in the
+pinned to a dock. Set `NOTEPAD_NO_DESKTOP_ENTRY=1` to skip this.
+`packaging/notepad.desktop` is a static entry for packagers. The icon is
+drawn from `packaging/notepad.svg` (`make icons`) and embedded in the
 binary.
 
 `--cpuprofile FILE` writes a CPU profile.
 
 ## Settings
 
-Settings are kept in `~/.config/jot/config.json` (or
-`$XDG_CONFIG_HOME/jot/config.json`) and are changed in the Settings
+Settings are kept in `~/.config/notepad/config.json` (or
+`$XDG_CONFIG_HOME/notepad/config.json`) and are changed in the Settings
 dialog (Ctrl+,), which saves them on OK or Apply. The file can also be edited by
 hand; a missing setting takes its default, and a wrong one is reported and
 the rest still apply.
@@ -118,7 +118,7 @@ menu have no shortcut by default.
 
 ## AppImage
 
-Releases for Linux are an AppImage, `Jot-*-x86_64.AppImage`: one file
+Releases for Linux are an AppImage, `Notepad-*-x86_64.AppImage`: one file
 with Qt inside it, which runs without installing anything. Make it
 executable and run it. On its first start it adds itself to the desktop's
 menus (see above).
@@ -142,7 +142,7 @@ can't open a window is never released.
 `make appimage` runs the same script locally. It works in a temporary
 folder outside the project and leaves only the AppImage in the project
 folder. The tools it downloads (linuxdeploy and its Qt plugin) are kept in
-`~/.cache/jot-appimage`; delete that folder to fetch their latest
+`~/.cache/notepad-appimage`; delete that folder to fetch their latest
 build. An AppImage built on a newer system only runs on systems at least
 as new.
 
@@ -154,7 +154,7 @@ second. An editor doesn't: Qt's `QPlainTextEdit` lays out only the lines
 on screen, repaints only what changed, and already opens, scrolls and
 searches a 13 MB file quickly. Drawing the text with OpenGL would mean
 writing text layout, selection, input methods and accessibility again, for
-no speed anyone would notice, so Jot uses plain Qt widgets.
+no speed anyone would notice, so Notepad uses plain Qt widgets.
 
 ## Testing
 
@@ -164,11 +164,11 @@ make check    # go vet, gofmt, staticcheck and qute vet
 ```
 
 The GUI tests run on Qt's offscreen platform, so they need no display.
-`JOT_PERF=1 go test -run LargeFileTimes -v ./internal/ui` times
+`NOTEPAD_PERF=1 go test -run LargeFileTimes -v ./internal/ui` times
 opening, editing, saving and searching a 13 MB file.
 
 ## Licence
 
-Jot is licensed under the GNU General Public License v3 (see
+Notepad is licensed under the GNU General Public License v3 (see
 `LICENSE`). The About box lists the licences of the libraries it is built
 with.

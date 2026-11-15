@@ -9,16 +9,16 @@ import (
 )
 
 func TestEntry(t *testing.T) {
-	entry := Entry("/home/me/bin/jot", "jot", "/home/me/.local/share/icons/hicolor/256x256/apps/jot.png")
+	entry := Entry("/home/me/bin/notepad", "notepad", "/home/me/.local/share/icons/hicolor/256x256/apps/notepad.png")
 	for _, line := range []string{
 		"[Desktop Entry]",
 		"Type=Application",
-		"Name=Jot",
-		"Exec=/home/me/bin/jot %F",
+		"Name=Notepad",
+		"Exec=/home/me/bin/notepad %F",
 		"MimeType=text/plain;",
-		"TryExec=/home/me/bin/jot",
-		"Icon=/home/me/.local/share/icons/hicolor/256x256/apps/jot.png",
-		"StartupWMClass=jot",
+		"TryExec=/home/me/bin/notepad",
+		"Icon=/home/me/.local/share/icons/hicolor/256x256/apps/notepad.png",
+		"StartupWMClass=notepad",
 	} {
 		if !strings.Contains(entry, line+"\n") {
 			t.Errorf("no %q in\n%s", line, entry)
@@ -31,12 +31,12 @@ func TestEntry(t *testing.T) {
 
 func TestExecQuoting(t *testing.T) {
 	for path, want := range map[string]string{
-		"/opt/jot":                      "/opt/jot",
-		"/home/me/My Apps/jot.AppImage": `"/home/me/My Apps/jot.AppImage"`,
-		`/tmp/a"b`:                      `"/tmp/a\\"b"`,
-		"/tmp/$HOME/x":                  `"/tmp/\\$HOME/x"`,
-		"/tmp/100%/x":                   "/tmp/100%%/x",
-		`/tmp/back\slash`:               `"/tmp/back\\\\slash"`,
+		"/opt/notepad":                      "/opt/notepad",
+		"/home/me/My Apps/notepad.AppImage": `"/home/me/My Apps/notepad.AppImage"`,
+		`/tmp/a"b`:                          `"/tmp/a\\"b"`,
+		"/tmp/$HOME/x":                      `"/tmp/\\$HOME/x"`,
+		"/tmp/100%/x":                       "/tmp/100%%/x",
+		`/tmp/back\slash`:                   `"/tmp/back\\\\slash"`,
 	} {
 		entry := Entry(path, "x", "/x.png")
 		if !strings.Contains(entry, "\nExec="+want+" %F\n") {
@@ -47,8 +47,8 @@ func TestExecQuoting(t *testing.T) {
 
 func TestExecutable(t *testing.T) {
 	// An AppImage is started again through the AppImage itself.
-	t.Setenv("APPIMAGE", "/home/me/Apps/jot-x86_64.AppImage")
-	if got, err := Executable(); err != nil || got != "/home/me/Apps/jot-x86_64.AppImage" {
+	t.Setenv("APPIMAGE", "/home/me/Apps/notepad-x86_64.AppImage")
+	if got, err := Executable(); err != nil || got != "/home/me/Apps/notepad-x86_64.AppImage" {
 		t.Errorf("in an AppImage: %q, %v", got, err)
 	}
 
@@ -78,14 +78,14 @@ func TestDir(t *testing.T) {
 
 func TestWrite(t *testing.T) {
 	data := t.TempDir()
-	entryPath := filepath.Join(data, "applications", "jot.desktop")
-	iconPath := filepath.Join(data, "icons", "hicolor", "256x256", "apps", "jot.png")
+	entryPath := filepath.Join(data, "applications", "notepad.desktop")
+	iconPath := filepath.Join(data, "icons", "hicolor", "256x256", "apps", "notepad.png")
 
-	if err := Write(data, "/opt/one/jot", "jot", []byte("png")); err != nil {
+	if err := Write(data, "/opt/one/notepad", "notepad", []byte("png")); err != nil {
 		t.Fatal(err)
 	}
 	entry, err := os.ReadFile(entryPath)
-	if err != nil || !strings.Contains(string(entry), "Exec=/opt/one/jot %F\n") {
+	if err != nil || !strings.Contains(string(entry), "Exec=/opt/one/notepad %F\n") {
 		t.Fatalf("entry %q, %v", entry, err)
 	}
 	if icon, err := os.ReadFile(iconPath); err != nil || string(icon) != "png" {
@@ -98,7 +98,7 @@ func TestWrite(t *testing.T) {
 	// The same again leaves the files alone.
 	old := time.Now().Add(-time.Hour)
 	os.Chtimes(entryPath, old, old)
-	if err := Write(data, "/opt/one/jot", "jot", []byte("png")); err != nil {
+	if err := Write(data, "/opt/one/notepad", "notepad", []byte("png")); err != nil {
 		t.Fatal(err)
 	}
 	if info, _ := os.Stat(entryPath); !info.ModTime().Equal(old) {
@@ -106,11 +106,11 @@ func TestWrite(t *testing.T) {
 	}
 
 	// Run from elsewhere, or under another name, it is rewritten.
-	if err := Write(data, "/home/me/Apps/jot.AppImage", "jot", []byte("png")); err != nil {
+	if err := Write(data, "/home/me/Apps/notepad.AppImage", "notepad", []byte("png")); err != nil {
 		t.Fatal(err)
 	}
 	entry, _ = os.ReadFile(entryPath)
-	if !strings.Contains(string(entry), "Exec=/home/me/Apps/jot.AppImage %F\n") || strings.Contains(string(entry), "/opt/one") {
+	if !strings.Contains(string(entry), "Exec=/home/me/Apps/notepad.AppImage %F\n") || strings.Contains(string(entry), "/opt/one") {
 		t.Errorf("entry not rewritten:\n%s", entry)
 	}
 	// No temporary files are left behind.
@@ -122,7 +122,7 @@ func TestWrite(t *testing.T) {
 func TestInstall(t *testing.T) {
 	data := t.TempDir()
 	t.Setenv("XDG_DATA_HOME", data)
-	t.Setenv("APPIMAGE", "/home/me/Apps/My jot.AppImage")
+	t.Setenv("APPIMAGE", "/home/me/Apps/My notepad.AppImage")
 
 	icon := []byte("\x89PNG icon")
 	if err := Install(icon); err != nil {
@@ -130,14 +130,14 @@ func TestInstall(t *testing.T) {
 	}
 
 	// The entry starts the AppImage, quoted as its name has a space.
-	entry, err := os.ReadFile(filepath.Join(data, "applications", "jot.desktop"))
+	entry, err := os.ReadFile(filepath.Join(data, "applications", "notepad.desktop"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	self, _ := os.Executable()
 	// The icon is named by its path, not looked for in the theme.
-	image := filepath.Join(data, "icons", "hicolor", "256x256", "apps", "jot.png")
-	for _, line := range []string{`Exec="/home/me/Apps/My jot.AppImage" %F`, "Icon=" + image, "StartupWMClass=" + filepath.Base(self)} {
+	image := filepath.Join(data, "icons", "hicolor", "256x256", "apps", "notepad.png")
+	for _, line := range []string{`Exec="/home/me/Apps/My notepad.AppImage" %F`, "Icon=" + image, "StartupWMClass=" + filepath.Base(self)} {
 		if !strings.Contains(string(entry), line+"\n") {
 			t.Errorf("no %q in\n%s", line, entry)
 		}
@@ -154,17 +154,17 @@ func TestInstall(t *testing.T) {
 func TestInstallSkipsTemporaryProgram(t *testing.T) {
 	data := t.TempDir()
 	t.Setenv("XDG_DATA_HOME", data)
-	t.Setenv("APPIMAGE", filepath.Join(os.TempDir(), "go-build123", "b001", "exe", "jot"))
+	t.Setenv("APPIMAGE", filepath.Join(os.TempDir(), "go-build123", "b001", "exe", "notepad"))
 	if err := Install([]byte("png")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(data, "applications", "jot.desktop")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(data, "applications", "notepad.desktop")); !os.IsNotExist(err) {
 		t.Errorf("an entry was written: %v", err)
 	}
 	for path, want := range map[string]bool{
 		filepath.Join(os.TempDir(), "x"): true,
 		os.TempDir() + "x/y":             false,
-		"/home/me/bin/jot":               false,
+		"/home/me/bin/notepad":           false,
 	} {
 		if got := temporary(path); got != want {
 			t.Errorf("temporary(%q) = %v", path, got)

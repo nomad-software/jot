@@ -2,13 +2,14 @@ package ui
 
 import (
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/nomad-software/qute/qtgui"
 	"github.com/nomad-software/qute/qtwidgets"
 
-	"jot/internal/config"
-	"jot/internal/desktop"
+	"notepad/internal/config"
+	"notepad/internal/desktop"
 )
 
 // choice is a combo box over a fixed list of setting values.
@@ -66,7 +67,7 @@ func (w *Window) newSettingsDialog() *settingsDialog {
 	s := &settingsDialog{}
 	dlg := qtwidgets.NewQDialog(w.w)
 	s.dlg = dlg
-	dlg.SetObjectName("jotSettings")
+	dlg.SetObjectName("notepadSettings")
 	dlg.SetWindowTitle("Settings")
 	if cfg.SettingsWidth >= minDialogWidth && cfg.SettingsHeight >= minDialogHeight {
 		dlg.Resize(cfg.SettingsWidth, cfg.SettingsHeight)
@@ -289,22 +290,16 @@ func (w *Window) shortcutsTab() (page *qtwidgets.QWidget, read func() (map[strin
 	return page, read
 }
 
-// labelClash puts the actions' labels in a clash config.Clashes reports
-// ("Ctrl+S (save, save_as)" becomes "Ctrl+S: Save, Save As").
-func labelClash(clash string) string {
-	key, ids, ok := strings.Cut(clash, " (")
-	if !ok {
-		return clash
-	}
+// labelClash describes a clash with the actions' labels: "Ctrl+S: Save,
+// Save As".
+func labelClash(clash config.Clash) string {
 	var labels []string
-	for id := range strings.SplitSeq(strings.TrimSuffix(ids, ")"), ", ") {
+	for _, id := range clash.Actions {
 		label := id
-		for _, spec := range actionSpecs {
-			if spec.id == id {
-				label = plainLabel(spec.label)
-			}
+		if i := slices.IndexFunc(actionSpecs, func(s actionSpec) bool { return s.id == id }); i >= 0 {
+			label = plainLabel(actionSpecs[i].label)
 		}
 		labels = append(labels, label)
 	}
-	return key + ": " + strings.Join(labels, ", ")
+	return clash.Key + ": " + strings.Join(labels, ", ")
 }

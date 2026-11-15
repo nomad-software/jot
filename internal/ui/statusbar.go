@@ -5,7 +5,7 @@ import (
 	"github.com/nomad-software/qute/qtgui"
 	"github.com/nomad-software/qute/qtwidgets"
 
-	"jot/internal/textfile"
+	"notepad/internal/textfile"
 )
 
 // messageTime is how long, in milliseconds, a message stays in the status
@@ -45,15 +45,15 @@ func (l *menuLabel) MousePressEvent(ev *qtgui.QMouseEvent) {
 func newStatusBar(w *Window) *statusBar {
 	s := &statusBar{win: w}
 	s.bar = qtwidgets.NewQStatusBar(nil)
-	s.bar.SetObjectName("jotStatusBar")
+	s.bar.SetObjectName("notepadStatusBar")
 	s.bar.SetSizeGripEnabled(true)
 	s.file = qtwidgets.NewQLabel(nil)
-	s.file.SetObjectName("jotStatusFile")
+	s.file.SetObjectName("notepadStatusFile")
 	s.file.SetTextInteractionFlags(qtcore.TextSelectableByMouse)
 	s.bar.AddWidgetFull(s.file, 1)
 
 	s.pos = qtwidgets.NewQLabel(nil)
-	s.pos.SetObjectName("jotStatusPosition")
+	s.pos.SetObjectName("notepadStatusPosition")
 	s.bar.AddPermanentWidget(s.pos)
 
 	label := func(name, tip string, open func(qtcore.QPoint)) *qtwidgets.QLabel {
@@ -66,8 +66,8 @@ func newStatusBar(w *Window) *statusBar {
 		s.bar.AddPermanentWidget(l)
 		return l
 	}
-	s.enc = label("jotStatusEncoding", "Encoding: click to change", s.encodingMenu)
-	s.eol = label("jotStatusLineEnding", "Line endings: click to change", s.lineEndingMenu)
+	s.enc = label("notepadStatusEncoding", "Encoding: click to change", s.encodingMenu)
+	s.eol = label("notepadStatusLineEnding", "Line endings: click to change", s.lineEndingMenu)
 	return s
 }
 

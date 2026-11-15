@@ -1,7 +1,7 @@
 #!/bin/sh
-# Builds Jot and packs it, with the Qt libraries it needs, into an
+# Builds Notepad and packs it, with the Qt libraries it needs, into an
 # AppImage: one file that runs on most Linux systems without installing
-# anything. The result is Jot-<version>-x86_64.AppImage in the folder OUT
+# anything. The result is Notepad-<version>-x86_64.AppImage in the folder OUT
 # (the project folder by default). Everything else is done in a temporary
 # folder outside the project, removed when the script ends.
 #
@@ -20,22 +20,22 @@ ROOT="$PWD"
 VERSION="${VERSION:-$(git describe --tags --always 2>/dev/null || echo dev)}"
 ARCH=x86_64
 OUT="${OUT:-$ROOT}"
-BUILD="$(mktemp -d "${TMPDIR:-/tmp}/jot-appimage.XXXXXX")"
+BUILD="$(mktemp -d "${TMPDIR:-/tmp}/notepad-appimage.XXXXXX")"
 trap 'rm -rf "$BUILD"' EXIT
 APPDIR="$BUILD/AppDir"
 TOOLS="$BUILD/tools"
 # The tools downloaded are kept between runs; delete the folder to fetch
 # their latest build again.
-CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/jot-appimage"
-OUTPUT="Jot-$VERSION-$ARCH.AppImage"
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/notepad-appimage"
+OUTPUT="Notepad-$VERSION-$ARCH.AppImage"
 
 mkdir -p "$TOOLS" "$CACHE"
 
-echo "Building Jot $VERSION"
-go build -ldflags "-s -w" -o "$BUILD/jot" .
+echo "Building Notepad $VERSION"
+go build -ldflags "-s -w" -o "$BUILD/notepad" .
 # The icon is the program's own, which it is built with. The tool names it by
 # its file, which has to be the name the desktop file gives it.
-cp internal/appicon/appicon.png "$BUILD/jot.png"
+cp internal/appicon/appicon.png "$BUILD/notepad.png"
 
 # linuxdeploy copies the program and every library it uses into a folder
 # laid out as an AppImage needs, and its Qt plugin adds the parts of Qt that
@@ -120,9 +120,9 @@ export LINUXDEPLOY_OUTPUT_VERSION="$VERSION"
 
 "$TOOLS/linuxdeploy-$ARCH.AppImage" \
 	--appdir "$APPDIR" \
-	--executable "$BUILD/jot" \
-	--desktop-file "$ROOT/packaging/jot.desktop" \
-	--icon-file "$BUILD/jot.png" \
+	--executable "$BUILD/notepad" \
+	--desktop-file "$ROOT/packaging/notepad.desktop" \
+	--icon-file "$BUILD/notepad.png" \
 	--custom-apprun "$ROOT/packaging/AppRun" \
 	--plugin qt
 
@@ -181,7 +181,7 @@ fi
 if command -v xvfb-run >/dev/null 2>&1; then
 	scratch="$BUILD/scratch" # removed with the build folder, however the script ends
 	status=0
-	XDG_CONFIG_HOME="$scratch/config" XDG_DATA_HOME="$scratch/data" JOT_NO_DESKTOP_ENTRY=1 \
+	XDG_CONFIG_HOME="$scratch/config" XDG_DATA_HOME="$scratch/data" NOTEPAD_NO_DESKTOP_ENTRY=1 \
 		QT_QPA_PLATFORM=xcb \
 		timeout 8 xvfb-run -a -s "-screen 0 1280x800x24" "$BUILD/$OUTPUT" || status=$?
 	if [ "$status" -ne 124 ]; then

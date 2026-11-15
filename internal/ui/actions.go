@@ -3,7 +3,7 @@ package ui
 import (
 	"strings"
 
-	"jot/internal/icons"
+	"notepad/internal/icons"
 )
 
 // actionSpec describes one of the window's actions: what menus and the

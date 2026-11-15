@@ -16,8 +16,8 @@ import (
 	"github.com/nomad-software/qute/qtwidgets"
 	"github.com/nomad-software/qute/qutetest"
 
-	"jot/internal/config"
-	"jot/internal/textfile"
+	"notepad/internal/config"
+	"notepad/internal/textfile"
 )
 
 func TestMain(m *testing.M) { qutetest.TestMain(m) }
@@ -26,7 +26,7 @@ func TestMain(m *testing.M) { qutetest.TestMain(m) }
 // closed when the test ends, its changes let go.
 func newTestWindow(t *testing.T, set func(*config.Config), files ...string) *Window {
 	t.Helper()
-	t.Setenv("JOT_NO_DESKTOP_ENTRY", "1")
+	t.Setenv("NOTEPAD_NO_DESKTOP_ENTRY", "1")
 	cfg := config.Default()
 	cfg.FontFamily = "DejaVu Sans Mono"
 	if set != nil {
@@ -92,7 +92,7 @@ func TestOpenEditSaveKeepsEncodingAndLineEndings(t *testing.T) {
 		if w.status.enc.Text() != "ISO-8859-1" || w.status.eol.Text() != "Windows" {
 			t.Errorf("status shows %q, %q", w.status.enc.Text(), w.status.eol.Text())
 		}
-		if !strings.HasSuffix(w.w.WindowTitle(), "latin.txt - Jot") {
+		if !strings.HasSuffix(w.w.WindowTitle(), "latin.txt - Notepad") {
 			t.Errorf("title = %q", w.w.WindowTitle())
 		}
 		qutetest.Key(d.edit, qtcore.Key_End, qtcore.NoModifier)
@@ -494,9 +494,18 @@ func TestSettingsDialog(t *testing.T) {
 
 		// Two actions with one shortcut are refused.
 		qtwidgets.QKeySequenceEditCast(findChild(s.dlg, "shortcut_open")).SetKeySequence(keySequence("Ctrl+Alt+S"))
-		answer(t, qtwidgets.QMessageBoxOk)
+		var said string
+		qutetest.WhenModal(t, func(m *qtwidgets.QWidget) {
+			box := qtwidgets.QMessageBoxCast(m)
+			said = box.Text()
+			qutetest.Click(box.Button(qtwidgets.QMessageBoxOk))
+		})
 		if s.apply() {
 			t.Error("clashing shortcuts were applied")
+		}
+		// The actions are named by their labels, as the dialog lists them.
+		if !strings.Contains(said, "Ctrl+Alt+S: Open, Save\n") {
+			t.Errorf("the clash was reported as %q", said)
 		}
 	})
 }
@@ -557,14 +566,12 @@ func TestUndoRedoActionsFollowTheDocument(t *testing.T) {
 	})
 }
 
-// TestScreenshot saves pictures of the window to look at: the find bar
-// open for replacing, and a notice, in the light and dark themes.
 // TestScreenshot saves the README's screenshot, docs/screenshot.png: a
 // note open as it looks in everyday use.
 func TestScreenshot(t *testing.T) {
-	dir := os.Getenv("JOT_SCREENSHOTS")
+	dir := os.Getenv("NOTEPAD_SCREENSHOTS")
 	if dir == "" {
-		t.Skip("set JOT_SCREENSHOTS to a folder to save the screenshot in")
+		t.Skip("set NOTEPAD_SCREENSHOTS to a folder to save the screenshot in")
 	}
 	// The file is in a home folder of its own, so the status bar shows a
 	// path like a user's.

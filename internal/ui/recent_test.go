@@ -10,7 +10,7 @@ import (
 	"github.com/nomad-software/qute/qtwidgets"
 	"github.com/nomad-software/qute/qutetest"
 
-	"jot/internal/config"
+	"notepad/internal/config"
 )
 
 // recentLabels returns what the Open Recent menu lists.

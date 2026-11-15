@@ -9,4 +9,4 @@
 # paths): the editor finds its libraries through the rpath linuxdeploy gives
 # it, and a New Window is started with the environment it has.
 HERE="$(dirname "$(readlink -f "$0")")"
-exec "$HERE/usr/bin/jot" "$@"
+exec "$HERE/usr/bin/notepad" "$@"

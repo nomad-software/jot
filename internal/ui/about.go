@@ -8,7 +8,7 @@ import (
 	"github.com/nomad-software/qute/qtcore"
 	"github.com/nomad-software/qute/qtwidgets"
 
-	"jot/internal/desktop"
+	"notepad/internal/desktop"
 )
 
 // aboutWidth is the narrowest the about box is, so that the notices of the

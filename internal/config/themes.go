@@ -145,12 +145,6 @@ func (s ThemeSpec) Resolve() (Theme, error) {
 	return t, nil
 }
 
-// Colours returns the theme's colours.
-func (t Theme) Colours() []string {
-	return []string{t.Background, t.Foreground, t.CurrentLine, t.Selection, t.SelectionText,
-		t.Gutter, t.GutterText, t.GutterCurrent, t.Match, t.MatchText}
-}
-
 // ParseColor parses "#rrggbb" or "#rgb" as 0xRRGGBB.
 func ParseColor(s string) (uint32, bool) {
 	hex, ok := strings.CutPrefix(strings.TrimSpace(s), "#")

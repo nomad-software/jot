@@ -4,10 +4,17 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
 )
+
+// colours returns every colour of a theme.
+func colours(t Theme) []string {
+	return []string{t.Background, t.Foreground, t.CurrentLine, t.Selection, t.SelectionText,
+		t.Gutter, t.GutterText, t.GutterCurrent, t.Match, t.MatchText}
+}
 
 func write(t *testing.T, data string) string {
 	t.Helper()
@@ -83,12 +90,29 @@ func TestNormalizeClamps(t *testing.T) {
 }
 
 func TestClashes(t *testing.T) {
-	got := Clashes(map[string]string{"save": "Ctrl+S", "open": "ctrl + s", "find": "Ctrl+F", "about": ""})
-	if len(got) != 1 || !strings.Contains(got[0], "open, save") {
-		t.Errorf("Clashes = %v", got)
+	// The shortcut is spelt as the first action, by name, has it, every
+	// time: not as whichever a map gives first.
+	for range 20 {
+		got := Clashes(map[string]string{"save": "Ctrl+S", "open": "ctrl + s", "find": "Ctrl+F", "about": "", "quit": "F1", "undo": "f1"})
+		want := []Clash{{"F1", []string{"quit", "undo"}}, {"ctrl + s", []string{"open", "save"}}}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("Clashes = %v, want %v", got, want)
+		}
+	}
+	if got := (Clash{"Ctrl+S", []string{"save", "save_as"}}).String(); got != "Ctrl+S (save, save_as)" {
+		t.Errorf("String = %q", got)
 	}
 	if got := Clashes(DefaultKeybindings); len(got) != 0 {
 		t.Errorf("the defaults clash: %v", got)
+	}
+	// A file that gives an action another's shortcut is reported, and the
+	// shortcuts are kept as it says.
+	c, err := Load(write(t, `{"keybindings": {"open": "Ctrl+S"}}`))
+	if err == nil || !strings.Contains(err.Error(), "keybindings used by more than one action: Ctrl+S (open, save)") {
+		t.Errorf("err = %v", err)
+	}
+	if c.Keybindings["open"] != "Ctrl+S" {
+		t.Errorf("keybindings = %v", c.Keybindings)
 	}
 }
 
@@ -147,7 +171,7 @@ func TestThemes(t *testing.T) {
 		if err != nil || th.Name == "" {
 			t.Errorf("%s: %v, name %q", id, err, th.Name)
 		}
-		for _, c := range th.Colours() {
+		for _, c := range colours(th) {
 			if !hex.MatchString(c) {
 				t.Errorf("%s: colour %q", id, c)
 			}
@@ -166,7 +190,7 @@ func TestThemeResolveFillsTheRest(t *testing.T) {
 	if th.Background != "#000000" || th.SelectionText != "#ffffff" || th.MatchText != "#000000" || th.Gutter != th.CurrentLine {
 		t.Errorf("resolved %+v", th)
 	}
-	for _, c := range th.Colours() {
+	for _, c := range colours(th) {
 		if c == "" {
 			t.Errorf("an empty colour in %+v", th)
 		}
@@ -207,11 +231,11 @@ func TestThemesInTheFile(t *testing.T) {
 
 func TestDirHonoursXDG(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "/x/y")
-	if Dir() != "/x/y/jot" {
+	if Dir() != "/x/y/notepad" {
 		t.Errorf("Dir = %s", Dir())
 	}
 	t.Setenv("XDG_CONFIG_HOME", "relative")
-	if !strings.HasSuffix(Dir(), "/.config/jot") {
+	if !strings.HasSuffix(Dir(), "/.config/notepad") {
 		t.Errorf("Dir with relative XDG = %s", Dir())
 	}
 }
