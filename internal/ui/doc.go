@@ -11,8 +11,8 @@ import (
 	"github.com/nomad-software/qute/qtgui"
 	"github.com/nomad-software/qute/qtwidgets"
 
-	"jot/internal/atomicfile"
-	"jot/internal/textfile"
+	"notepad/internal/atomicfile"
+	"notepad/internal/textfile"
 )
 
 // Doc is one tab: a document's text, the file it is saved to, and the
@@ -51,6 +51,11 @@ func statFile(path string) fileState {
 	if err != nil {
 		return fileState{}
 	}
+	return stateOf(info)
+}
+
+// stateOf returns the state of the file info describes.
+func stateOf(info os.FileInfo) fileState {
 	st := fileState{exists: true, size: info.Size(), mod: info.ModTime()}
 	if sys, ok := info.Sys().(*syscall.Stat_t); ok {
 		st.inode = sys.Ino
@@ -66,7 +71,7 @@ func newDoc(w *Window) *Doc {
 	lay.SetSpacing(0)
 
 	d.notice = qtwidgets.NewQFrame(nil)
-	d.notice.SetObjectName("jotNotice")
+	d.notice.SetObjectName("notepadNotice")
 	nl := qtwidgets.NewQHBoxLayout(d.notice)
 	nl.SetContentsMargins(qtcore.QMargins{Left: 10, Top: 6, Right: 10, Bottom: 6})
 	d.noticeText = qtwidgets.NewQLabel(nil)
@@ -145,11 +150,12 @@ func (d *Doc) setFile(f textfile.File) {
 	d.edit.Document().SetModifiedFull(false)
 }
 
-// setPath makes path the document's file, with f its text as read from it;
-// a file that is not there yet has none, and is made when it is saved.
-func (d *Doc) setPath(path string, f textfile.File) {
+// setPath makes path the document's file, with f its text as read from it
+// and disk the file's state from before it was read; a file that is not
+// there yet has none, and is made when it is saved.
+func (d *Doc) setPath(path string, f textfile.File, disk fileState) {
 	d.path = path
-	d.disk = statFile(path)
+	d.disk = disk
 	if f.Encoding == "" {
 		f.Encoding, f.LineEnding = textfile.UTF8, textfile.LF
 	}
@@ -163,6 +169,10 @@ func (d *Doc) reload(enc textfile.Encoding) error {
 	if d.path == "" {
 		return nil
 	}
+	// The file's state is taken before it is read: a change made while it
+	// is read is then a change from what was recorded, and read again,
+	// rather than taken for what was read and never seen.
+	disk := statFile(d.path)
 	data, err := os.ReadFile(d.path)
 	if err != nil {
 		return err
@@ -174,7 +184,7 @@ func (d *Doc) reload(enc textfile.Encoding) error {
 	cursor := d.edit.TextCursor()
 	line, col := cursor.BlockNumber(), cursor.PositionInBlock()
 	scroll := d.edit.VerticalScrollBar().Value()
-	d.disk = statFile(d.path)
+	d.disk = disk
 	d.setFile(f)
 	d.hideNotice()
 	d.goTo(line, col)

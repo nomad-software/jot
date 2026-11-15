@@ -9,7 +9,7 @@ import (
 	"github.com/nomad-software/qute/qtgui"
 	"github.com/nomad-software/qute/qtsvg"
 
-	"jot/internal/icons"
+	"notepad/internal/icons"
 )
 
 // icon returns the editor's own icon with the name. It is drawn each time it is
@@ -19,7 +19,7 @@ import (
 func icon(name string) *qtgui.QIcon {
 	data, err := icons.SVG(name)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "jot:", err)
+		fmt.Fprintln(os.Stderr, "notepad:", err)
 		return qtgui.NewQIcon()
 	}
 	return qtgui.NewQIconWithIconEngine(newIconEngine(name, data))

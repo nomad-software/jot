@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"jot/internal/icons"
+	"notepad/internal/icons"
 )
 
 // TestStyle checks that every icon is drawn in the one style: an outline on

@@ -3,7 +3,7 @@ package ui
 import (
 	"github.com/nomad-software/qute/qtgui"
 
-	"jot/internal/appicon"
+	"notepad/internal/appicon"
 )
 
 var appIconCache *qtgui.QIcon

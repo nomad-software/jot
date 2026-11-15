@@ -8,7 +8,7 @@ import (
 	"github.com/nomad-software/qute/qtcore"
 	"github.com/nomad-software/qute/qtwidgets"
 
-	"jot/internal/config"
+	"notepad/internal/config"
 )
 
 // themeColourFields are a theme's colours as the Colours page edits them,

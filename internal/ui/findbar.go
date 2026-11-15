@@ -7,7 +7,7 @@ import (
 	"github.com/nomad-software/qute/qtgui"
 	"github.com/nomad-software/qute/qtwidgets"
 
-	"jot/internal/icons"
+	"notepad/internal/icons"
 )
 
 // maxHighlights is how many of a search's matches are highlighted at most,
@@ -65,7 +65,7 @@ func (f *fieldKeys) KeyPressEvent(ev *qtgui.QKeyEvent) {
 func newFindBar(w *Window) *findBar {
 	b := &findBar{win: w}
 	b.box = qtwidgets.NewQWidget(nil)
-	b.box.SetObjectName("jotFindBar")
+	b.box.SetObjectName("notepadFindBar")
 	outer := qtwidgets.NewQVBoxLayout(b.box)
 	outer.SetContentsMargins(qtcore.QMargins{Left: 8, Top: 6, Right: 8, Bottom: 6})
 	outer.SetSpacing(6)
@@ -88,7 +88,7 @@ func newFindBar(w *Window) *findBar {
 	row := qtwidgets.NewQHBoxLayout(nil)
 	row.SetSpacing(6)
 	b.find = field("Find", false)
-	b.find.SetObjectName("jotFindField")
+	b.find.SetObjectName("notepadFindField")
 	b.find.OnTextEdited(func(string) { b.incremental() })
 	row.AddWidget(b.find)
 	row.AddWidget(button("Previous", func() { b.next(false) }))

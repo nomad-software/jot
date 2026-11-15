@@ -8,7 +8,7 @@ import (
 	"github.com/nomad-software/qute/qtwidgets"
 	"github.com/nomad-software/qute/qutetest"
 
-	"jot/internal/config"
+	"notepad/internal/config"
 )
 
 func TestColoursTab(t *testing.T) {

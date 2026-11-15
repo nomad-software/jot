@@ -6,7 +6,7 @@ import (
 
 	"github.com/nomad-software/qute/qtwidgets"
 
-	"jot/internal/config"
+	"notepad/internal/config"
 )
 
 // recentMenuID stands in menuSpecs for the Open Recent menu.
@@ -43,7 +43,7 @@ func (w *Window) addRecent(path string) {
 // it opens.
 func (w *Window) makeRecentMenu(menu *qtwidgets.QMenu) {
 	w.recent = menu.AddMenuTitle("Open &Recent")
-	w.recent.SetObjectName("jotRecentMenu")
+	w.recent.SetObjectName("notepadRecentMenu")
 	w.recent.OnAboutToShow(w.fillRecentMenu)
 	w.fillRecentMenu()
 }

@@ -4,7 +4,7 @@ import (
 	"github.com/nomad-software/qute/qtcore"
 	"github.com/nomad-software/qute/qtwidgets"
 
-	"jot/internal/icons"
+	"notepad/internal/icons"
 )
 
 // tabBaseWidth is the width every tab asks for. The tab bar is as wide as
@@ -52,10 +52,10 @@ func newTabWidget(parent qtwidgets.QWidgetLike) *qtwidgets.QTabWidget {
 	tabs := qtwidgets.NewQTabWidgetWith(tw, parent)
 	bar := &tabBar{tabs: tabs}
 	qtwidgets.NewQTabBarWith(bar, nil)
-	bar.SetObjectName("jotTabBar")
+	bar.SetObjectName("notepadTabBar")
 	bar.SetElideMode(qtcore.ElideMiddle) // keeps both ends of a long file name
 	tw.SetTabBar(bar)
-	tabs.SetObjectName("jotTabs")
+	tabs.SetObjectName("notepadTabs")
 	// Document mode turns expanding off, so it goes first.
 	tabs.SetDocumentMode(true)
 	bar.SetExpanding(true)

@@ -10,7 +10,7 @@ import (
 	"github.com/nomad-software/qute/qtgui"
 	"github.com/nomad-software/qute/qtwidgets"
 
-	"jot/internal/config"
+	"notepad/internal/config"
 )
 
 // gutterPadding is the room, in pixels, on each side of the line numbers.
@@ -52,11 +52,11 @@ type gutterWidget struct {
 func newTextEditor(parent qtwidgets.QWidgetLike) *textEditor {
 	e := &textEditor{tabWidth: 4}
 	e.edit = qtwidgets.NewQPlainTextEditWith(e, parent)
-	e.edit.SetObjectName("jotText")
+	e.edit.SetObjectName("notepadText")
 	e.edit.SetFrameShape(qtwidgets.QFrameNoFrame)
 	e.gutter = &gutterWidget{editor: e}
 	qtwidgets.NewQWidgetWith(e.gutter, e.edit)
-	e.gutter.SetObjectName("jotGutter")
+	e.gutter.SetObjectName("notepadGutter")
 	// Padding is made with the viewport's margins, not the document's: Qt
 	// counts a change of those as a change to undo. The document's own
 	// margin is taken away once, while there is nothing to undo.

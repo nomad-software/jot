@@ -1,12 +1,12 @@
 [Desktop Entry]
 Type=Application
-Name=Jot
+Name=Notepad
 GenericName=Text Editor
 Comment=Simple text editor with tabs
-Exec=jot %F
-Icon=jot
+Exec=notepad %F
+Icon=notepad
 Categories=Utility;TextEditor;
 Keywords=text;editor;plain;notepad;
 MimeType=text/plain;
 Terminal=false
-StartupWMClass=jot
+StartupWMClass=notepad

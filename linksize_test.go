@@ -21,7 +21,7 @@ func TestLinkerDropsUnusedMethods(t *testing.T) {
 	if err != nil {
 		t.Skip("no go command:", err)
 	}
-	bin := filepath.Join(t.TempDir(), "jot")
+	bin := filepath.Join(t.TempDir(), "notepad")
 	if out, err := exec.Command(gobin, "build", "-o", bin, ".").CombinedOutput(); err != nil {
 		t.Fatalf("go build: %v\n%s", err, out)
 	}

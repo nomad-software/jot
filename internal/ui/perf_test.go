@@ -12,10 +12,10 @@ import (
 )
 
 // TestLargeFileTimes reports how long a large file takes to open, type in,
-// save and search. It is run by hand: JOT_PERF=1 go test -run Large -v.
+// save and search. It is run by hand: NOTEPAD_PERF=1 go test -run Large -v.
 func TestLargeFileTimes(t *testing.T) {
-	if os.Getenv("JOT_PERF") == "" {
-		t.Skip("set JOT_PERF=1 to time a large file")
+	if os.Getenv("NOTEPAD_PERF") == "" {
+		t.Skip("set NOTEPAD_PERF=1 to time a large file")
 	}
 	var b strings.Builder
 	for i := range 200000 {

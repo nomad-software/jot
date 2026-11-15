@@ -17,9 +17,9 @@ import (
 	"github.com/nomad-software/qute/qtgui"
 	"github.com/nomad-software/qute/qtwidgets"
 
-	"jot/internal/config"
-	"jot/internal/desktop"
-	"jot/internal/textfile"
+	"notepad/internal/config"
+	"notepad/internal/desktop"
+	"notepad/internal/textfile"
 )
 
 // largeFile is the size, in bytes, past which opening a file is asked
@@ -98,7 +98,7 @@ func NewWindow(cfg *config.Config, cfgPath string, loadErr error, files []string
 	w := &Window{cfg: cfg, cfgPath: cfgPath, acts: map[string]*qtgui.QAction{}, changed: map[string]bool{}}
 	applyWindowTheme(cfg.WindowTheme)
 	w.w = qtwidgets.NewQMainWindowWith(&mainWindow{win: w}, nil)
-	w.w.SetObjectName("jotWindow")
+	w.w.SetObjectName("notepadWindow")
 	w.w.SetWindowIcon(AppIcon())
 	width, height := cfg.WindowWidth, cfg.WindowHeight
 	if width < minWindowWidth || height < minWindowHeight {
@@ -168,7 +168,7 @@ func NewWindow(cfg *config.Config, cfgPath string, loadErr error, files []string
 	}
 	w.w.ActivateWindow()
 	if loadErr != nil {
-		fmt.Fprintln(os.Stderr, "jot:", loadErr)
+		fmt.Fprintln(os.Stderr, "notepad:", loadErr)
 		w.message("Settings: " + loadErr.Error())
 	}
 	return w
@@ -203,19 +203,19 @@ func (w *Window) applyStyle() {
 		"$edSel", th.Selection,
 		"$edSelText", th.SelectionText,
 	).Replace(`
-		QTabBar#jotTabBar { background: $window; }
-		QTabBar#jotTabBar::tab {
+		QTabBar#notepadTabBar { background: $window; }
+		QTabBar#notepadTabBar::tab {
 			background: $window; color: $text;
 			border: none; border-bottom: 2px solid $mid;
 			padding: 6px 8px; margin: 0;
 		}
-		QTabBar#jotTabBar::tab:hover:!selected { background: $button; }
-		QTabBar#jotTabBar::tab:selected { background: $base; border-bottom-color: $highlight; }
-		QFrame#jotNotice { background: $highlight; }
-		QFrame#jotNotice QLabel { color: $hlText; }
-		QLineEdit#jotFindField[notFound="true"] { color: #dc322f; }
-		QWidget#jotFindBar { border-top: 1px solid $mid; }
-		QPlainTextEdit#jotText {
+		QTabBar#notepadTabBar::tab:hover:!selected { background: $button; }
+		QTabBar#notepadTabBar::tab:selected { background: $base; border-bottom-color: $highlight; }
+		QFrame#notepadNotice { background: $highlight; }
+		QFrame#notepadNotice QLabel { color: $hlText; }
+		QLineEdit#notepadFindField[notFound="true"] { color: #dc322f; }
+		QWidget#notepadFindBar { border-top: 1px solid $mid; }
+		QPlainTextEdit#notepadText {
 			background: $edBg; color: $edFg; border: none;
 			selection-background-color: $edSel; selection-color: $edSelText;
 		}
@@ -266,7 +266,7 @@ const toolButtonWidth = 80
 
 func (w *Window) makeToolbar(parent qtwidgets.QWidgetLike) {
 	tb := qtwidgets.NewQToolBarWithTitleWith(&toolbarWidget{}, "Toolbar", parent)
-	tb.SetObjectName("jotToolbar")
+	tb.SetObjectName("notepadToolbar")
 	tb.SetMovable(false)
 	tb.SetFloatable(false)
 	tb.SetToolButtonStyle(qtcore.ToolButtonTextUnderIcon)
@@ -603,6 +603,7 @@ func (w *Window) openFile(path string) {
 		}
 	}
 	var f textfile.File
+	var disk fileState // taken before the file is read, as reload does
 	info, err := os.Stat(path)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
@@ -620,6 +621,7 @@ func (w *Window) openFile(path string) {
 		}
 	}
 	if err == nil {
+		disk = stateOf(info)
 		data, err := os.ReadFile(path)
 		if err != nil {
 			w.warn(err.Error())
@@ -634,7 +636,7 @@ func (w *Window) openFile(path string) {
 	if d == nil || !d.pristine() {
 		d = w.addDoc(0)
 	}
-	d.setPath(path, f)
+	d.setPath(path, f, disk)
 	w.watch(path)
 	if err == nil { // a file that is there, not a new one
 		w.addRecent(path)
@@ -901,7 +903,7 @@ func (w *Window) saveGeometry() {
 		"window_width": width, "window_height": height, "window_maximized": maximized,
 	})
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "jot: the window size could not be saved:", err)
+		fmt.Fprintln(os.Stderr, "notepad: the window size could not be saved:", err)
 		return
 	}
 	c.WindowWidth, c.WindowHeight, c.WindowMaximized = width, height, maximized
