@@ -1,6 +1,6 @@
 # <img src="internal/appicon/appicon.png" alt="" width="40" height="40"> Notepad
 
-A simple, quick text editor for Linux in the style of gedit, written in Go
+A simple, quick text editor for Linux, written in Go
 with Qt 6 (via [qute](https://github.com/nomad-software/qute)). It is for
 plain text and quick edits: tabs, line numbers, find and replace, and
 nothing that gets in the way. There is no syntax highlighting.
@@ -145,16 +145,6 @@ folder. The tools it downloads (linuxdeploy and its Qt plugin) are kept in
 `~/.cache/notepad-appimage`; delete that folder to fetch their latest
 build. An AppImage built on a newer system only runs on systems at least
 as new.
-
-## Why no OpenGL?
-
-Termite, the terminal this editor takes its look from, draws its text
-with OpenGL because a terminal redraws a grid of cells many times a
-second. An editor doesn't: Qt's `QPlainTextEdit` lays out only the lines
-on screen, repaints only what changed, and already opens, scrolls and
-searches a 13 MB file quickly. Drawing the text with OpenGL would mean
-writing text layout, selection, input methods and accessibility again, for
-no speed anyone would notice, so Notepad uses plain Qt widgets.
 
 ## Testing
 

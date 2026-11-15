@@ -4,8 +4,8 @@ A simple text editor for Linux in the style of gedit: Go + Qt 6.12+ via
 qute (github.com/nomad-software/qute, the user's own project, checked out
 beside this one in ../qute). Termite (../termite), the user's terminal, is
 the reference for packaging, toolbar, icons and window themes; ApeMail
-(../apemail) is another reference app. Plain `QPlainTextEdit`, no OpenGL
-(see README "Why no OpenGL?"). See README.md for features and settings.
+(../apemail) is another reference app. Plain `QPlainTextEdit`, no OpenGL.
+See README.md for features and settings.
 
 ## Build and check
 - `make build` (./notepad), `make test` (race), `make check` (vet, gofmt,
