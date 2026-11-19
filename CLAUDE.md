@@ -10,7 +10,9 @@ See README.md for features and settings.
 ## Build and check
 - `make build` (./notepad), `make test` (race), `make check` (vet, gofmt,
   staticcheck in `$GOPATH/bin`, `qute vet` at go.mod's version),
-  `make icons` (SVG → embedded PNG), `make screenshots` (docs/screenshot.png),
+  `make icons` (the app icon's SVG → embedded PNG; the toolbar icons in
+  `internal/icons/svg` are embedded as SVG and need no step),
+  `make screenshots` (docs/screenshot.png),
   `make appimage`.
 - GUI tests (`internal/ui/gui_test.go`) run on Qt's offscreen platform, so
   they need no display. Answer dialogs opened by the call under test with

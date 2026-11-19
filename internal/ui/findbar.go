@@ -212,15 +212,15 @@ func (b *findBar) incremental() {
 
 // next selects the next match after the selection, or before it, going
 // round past the end (or start) of the document.
-func (b *findBar) next(forward bool) bool {
+func (b *findBar) next(forward bool) {
 	d := b.win.current()
 	text := b.find.Text()
 	if d == nil {
-		return false
+		return
 	}
 	if text == "" {
 		b.setNotFound(false)
-		return false
+		return
 	}
 	flags := b.flags()
 	if !forward {
@@ -241,12 +241,11 @@ func (b *findBar) next(forward bool) bool {
 	b.setNotFound(found.IsNull())
 	if found.IsNull() {
 		b.win.message(fmt.Sprintf("%q not found", text))
-		return false
+		return
 	}
 	d.edit.SetTextCursor(found)
 	d.edit.CenterCursor()
 	b.showCount(d)
-	return true
 }
 
 // highlight highlights the current document's matches, up to

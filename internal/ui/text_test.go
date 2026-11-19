@@ -117,3 +117,31 @@ func TestMatchCount(t *testing.T) {
 		}
 	}
 }
+
+func TestUTF16Prefix(t *testing.T) {
+	tests := []struct {
+		s    string
+		n    int
+		want int
+	}{
+		{"abc", 0, 0},
+		{"abc", 2, 2},
+		{"abc", 9, 3},
+		{"é!", 1, 2},    // é is one unit, two bytes
+		{"😀!", 2, 4},    // the emoji is two units, four bytes
+		{"\xffa", 1, 1}, // a bad byte is one unit, one byte
+	}
+	for _, tt := range tests {
+		if got := utf16Prefix(tt.s, tt.n); got != tt.want {
+			t.Errorf("utf16Prefix(%q, %d) = %d, want %d", tt.s, tt.n, got, tt.want)
+		}
+	}
+}
+
+func TestPlural(t *testing.T) {
+	for n, want := range map[int]string{0: "0 lines", 1: "1 line", 2: "2 lines"} {
+		if got := plural(n, "line", "lines"); got != want {
+			t.Errorf("plural(%d) = %q, want %q", n, got, want)
+		}
+	}
+}

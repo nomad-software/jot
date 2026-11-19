@@ -636,3 +636,72 @@ func TestClosedFileIsNotWatchedAgain(t *testing.T) {
 		}
 	})
 }
+
+func TestSaveAsRefusesAFileOpenInAnotherTab(t *testing.T) {
+	a := writeFile(t, "a.txt", []byte("a\n"))
+	b := writeFile(t, "b.txt", []byte("b\n"))
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil, a, b)
+		d := w.current()
+		if d.path != b {
+			t.Fatalf("current is %q", d.path)
+		}
+		answer(t, qtwidgets.QMessageBoxOk)
+		if w.saveTo(d, a) {
+			t.Error("saved over a file another tab has open")
+		}
+		if got, _ := os.ReadFile(a); string(got) != "a\n" {
+			t.Errorf("a.txt was changed: %q", got)
+		}
+		if d.path != b {
+			t.Errorf("the document's file became %q", d.path)
+		}
+	})
+}
+
+func TestFindWrapsAround(t *testing.T) {
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil)
+		d := w.current()
+		d.edit.SetPlainText("cat dog cat")
+		w.run("find", false)
+		qutetest.Type(w.find.find, "cat")
+		w.run("find_next", false)
+		if start := d.edit.TextCursor().SelectionStart(); start != 8 {
+			t.Fatalf("Find Next went to %d", start)
+		}
+		w.run("find_next", false)
+		if start := d.edit.TextCursor().SelectionStart(); start != 0 {
+			t.Errorf("Find Next past the end went to %d", start)
+		}
+		if got := w.status.bar.CurrentMessage(); got != "Search wrapped around" {
+			t.Errorf("status message %q", got)
+		}
+		w.run("find_prev", false)
+		if start := d.edit.TextCursor().SelectionStart(); start != 8 {
+			t.Errorf("Find Previous past the start went to %d", start)
+		}
+		if got := w.find.count.Text(); got != "2 of 2" {
+			t.Errorf("count %q", got)
+		}
+	})
+}
+
+func TestCycleTabWrapsAround(t *testing.T) {
+	qutetest.Run(t, func() {
+		w := newTestWindow(t, nil)
+		w.newTab()
+		w.newTab()
+		if w.tabs.CurrentIndex() != 2 {
+			t.Fatalf("current tab %d", w.tabs.CurrentIndex())
+		}
+		w.run("next_tab", false)
+		if w.tabs.CurrentIndex() != 0 {
+			t.Errorf("Next Tab from the last went to %d", w.tabs.CurrentIndex())
+		}
+		w.run("prev_tab", false)
+		if w.tabs.CurrentIndex() != 2 {
+			t.Errorf("Previous Tab from the first went to %d", w.tabs.CurrentIndex())
+		}
+	})
+}
